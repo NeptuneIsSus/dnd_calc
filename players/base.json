@@ -1,0 +1,131 @@
+{
+    "edition": "DnD 5th Edition",
+    "character_version": 0,
+
+
+    "name": "John Doe",
+    "player_name": "Neptune",
+    "race": "human",
+    "background": "guild artisan",
+    "alignment": "C/G",
+    "experience_points": 0,
+
+
+    "inspiration": 0,
+    "base_speed": 30,
+    "current_hp": 15,
+    "temporary_hp": 0,
+
+
+    "proficiency_bonus": 3,
+    "proficiency_abilities": [
+        "athletics",
+        "insight",
+        "perception",
+        "persuasion"
+    ],
+
+
+    "stats": {
+        "strength": 17,
+        "dexterity": 13,
+        "constitution": 16,
+        "intelligence": 10,
+        "wisdom": 12,
+        "charisma": 8
+    },
+
+
+    "classes": [
+        {
+            "class": "ranger",
+            "level": 5
+        },
+        {
+            "class": "druid",
+            "level": 1
+        }
+    ],
+
+
+    "feats": [
+        "mobile"
+    ],
+
+
+    "attacks": [
+        {
+            "name": "Crossbow, hand",
+            "cost": "75gp",
+            "weight": 3,
+            "consumable": false,
+            "damage": "1d8",
+            "damage_type": "",
+            "properties": [
+                "ranged",
+                "martial",
+                "light",
+                "loading"
+            ],
+            "stats": {
+                "range": "30/120"
+            }
+        },
+        {
+            "name": "Quarterstaff",
+            "cost": "2sp",
+            "weight": 4,
+            "consumable": false,
+            "damage": "1d6",
+            "damage_type": "bludgeoning",
+            "properties": [
+                "melee",
+                "simple"
+            ],
+            "stats": {
+                "versatile": "1d8"
+            }
+        },
+        {
+            "name": "Spear",
+            "cost": "1gp",
+            "weight": 1,
+            "consumable": true,
+            "amount": 2,
+            "damage": "1d6",
+            "damage_type": "piercing",
+            "properties": [
+                "melee",
+                "simple"
+            ],
+            "stats": {
+                "thrown": "20/60",
+                "versatile": "1d8"
+            }
+        }
+    ],
+    "ammo": [
+        {
+            "type": "crossbow bolts",
+            "count": 20,
+            "cost": "5cp",
+            "weight": 0.075
+        }
+    ],
+
+
+    "spellcasting_class": "paladin",
+    "spellcasting_ability": "charisma",
+    "spell_slots": [4,2],
+    "slots_expended": [1,0],
+    "spells": [
+        ["shocking grasp"],
+        ["cure wounds", "searing smite", "shield of faith", "command", "armor of agathys", "misty step", "silvery barbs"],
+        ["pretend i'm a level 2 spell"]
+    ],
+
+
+    "age": 20,
+    "height": "6'1",
+    "weight": 140
+}

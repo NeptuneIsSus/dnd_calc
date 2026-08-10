@@ -1,6 +1,18 @@
+import sys
+
 commands = {}
+player_data = {}
+
+
+
+# BASE COMMAND CLASS
+
+
 
 class cmd:
+
+    # Specific cmd functions
+
     def description(self) -> str:
         return "Description"
     
@@ -10,7 +22,7 @@ class cmd:
     def get_acceptable_args(self) -> list:
         return []
 
-
+    # Universal cmd functions
 
     def check_validity(self, args:list) -> str:
         # return "" = success, otherwise it's considered an error
@@ -32,115 +44,129 @@ class cmd:
 
         for i, a in enumerate(valids):
             # print(i, a, args[i + 1], a["type"])
+            argument = args[i + 1]
             match a["type"]:
                 case "int":
                     try:
-                        num = int(args[i + 1])
+                        num = int(argument)
                         continue
                     except ValueError:
-                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a whole number!"
+                        return f"<!!> Argument {i + 1} ({argument}) must be a whole number!"
                 case "float":
                     try:
-                        num = float(args[i + 1])
+                        num = float(argument)
                         continue
                     except ValueError:
-                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                        return f"<!!> Argument {i + 1} ({argument}) must be a number!"
                 case "percent":
                     try:
-                        num = float(args[i + 1])
+                        num = float(argument)
                         if num <= 1.0 and num >= 0.0:
                             continue
                         else:
-                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between 0.0 and 1.0!"
+                            return f"<!!> Argument {i + 1} ({argument}) must be a value between 0.0 and 1.0!"
                     except ValueError:
-                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                        return f"<!!> Argument {i + 1} ({argument}) must be a number!"
                 case "range":
                     try:
-                        num = float(args[i + 1])
+                        num = float(argument)
                         if num <= float(a["max"]) and num >= float(a["min"]):
                             continue
                         else:
-                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between {a["min"]} and {a["max"]}!"
+                            return f"<!!> Argument {i + 1} ({argument}) must be a value between {a["min"]} and {a["max"]}!"
                     except ValueError:
-                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                        return f"<!!> Argument {i + 1} ({argument}) must be a number!"
                 case "rangei":
                     try:
-                        num = int(args[i + 1])
+                        num = int(argument)
                         if num <= int(a["max"]) and num >= int(a["min"]):
                             continue
                         else:
-                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between {a["min"]} and {a["max"]}!"
+                            return f"<!!> Argument {i + 1} ({argument}) must be a value between {a["min"]} and {a["max"]}!"
                     except ValueError:
-                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                        return f"<!!> Argument {i + 1} ({argument}) must be a number!"
                 case "str":
                     continue
+                case "custom":
+                    options = a["list"]
+                    matcher = next((option for option in options if option.lower().startswith(argument.lower())),None)
+                    if matcher is None:
+                        lister = ""
+                        for item in options:
+                            lister += f"{item}, "
+                        return f"<!!> Argument {i + 1} ({argument}) must match one of these options!\n<!!> {lister}"
+                    else:
+                        continue
+
                 case _:
                     return "<!!> Failed due to bug in the code"
 
         return ""
+
+    def autocomplete(self,args,index) -> str:
+        argument = args[index]
+        options = self.get_acceptable_args()[index - 1]["list"]
+        matcher = next((option for option in options if option.lower().startswith(argument.lower())),None)
+        if matcher is None:
+            print("<!!> ERROR IN AUTOCOMPLETE: Something was wrong with the code and allowed an illegal autocomplete to happen")
+            input("<!!> Press enter to quit")
+            sys.exit()
+            matcher = ""
+        return matcher
+
+
+
+# SPECIFIC COMMANDS
+
+
 
 class cmdAbilityScore(cmd):
     def description(self) -> str:
         return "Checks the +/- modifier of a given stat number"
 
     def get_acceptable_args(self) -> list:
-        return [{"name":"stat_number","type":"rangei","min":1,"max":30}]
+        return [{"name":"stat_number","prompt": "Please enter a stat number (between 1 to 30)","type":"rangei","min":1,"max":30}]
 
     def execute(self, args:list):
+        result = self.get_score(args)
+        return f"> You'd have a {result} modifier with that stat number."
+
+    def get_score(self, args:list):
         num = int(args[1])
-        result = 0
-
-        if num > 30:
-            result = "NAN"
-        elif num == 30:
-            result = 10
-        elif num >= 28:
-            result = 9
-        elif num >= 26:
-            result = 8
-        elif num >= 24:
-            result = 7
-        elif num >= 22:
-            result = 6
-        elif num >= 20:
-            result = 5
-        elif num >= 18:
-            result = 4
-        elif num >= 16:
-            result = 3
-        elif num >= 14:
-            result = 2
-        elif num >= 12:
-            result = 1
-        elif num >= 10:
-            result = 0
-        elif num >= 8:
-            result = -1
-        elif num >= 6:
-            result = -2
-        elif num >= 4:
-            result = -3
-        elif num >= 2:
-            result = -4
-        elif num == 1:
-            result = -5
+        num2 = (num - 10) // 2
+        if num2 > 0:
+            result = f"+{num2}"
         else:
-            result = "NAN"
+            result = num2
+        return result
 
-        if result == "NAN":
-            return "<!!> Given stat number exceeds the stat caps (1-30)"
-        else:
-            if result > 0:
-                result = f"+{result}"
-            return f"> You'd have a {result} modifier with that stat number."
+class cmdStat(cmd):
+    def description(self) -> str:
+        return "Checks the +/- modifier of a given stat"
 
-# AAAA
+    def get_acceptable_args(self) -> list:
+        return [{
+            "name": "stat_name", "prompt": "Please enter one of the 6 stats", "type": "custom",
+            "list": ["strength","dexterity","constitution","intelligence","wisdom","charisma"]
+        }]
+
+    def execute(self, args: list):
+        stat_name = self.autocomplete(args,1)
+        stat_score = player_data["stats"][stat_name]
+        ability_score = cmdAbilityScore()
+        score = ability_score.get_score(["",stat_score])
+        return f"> You have a {score} modifier in {stat_name}"
+
+
+
+# Adding all commands to a list
 
 commands = {
-    "ability_score": cmdAbilityScore
+    "ability_score": cmdAbilityScore,
+    "stat": cmdStat
 }
 
-# AAAAA pt 2
+# Command referencer
 
 def execute_command(args:list):
     if args[0] in commands:

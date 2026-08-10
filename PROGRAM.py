@@ -7,6 +7,3 @@ while True:
     args = command.split()
     # print(args)
     execute_command(args)
-    
-
-    

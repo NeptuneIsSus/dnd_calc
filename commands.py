@@ -10,9 +10,6 @@ class cmd:
     def get_acceptable_args(self) -> list:
         return []
 
-    def get_custom_args(self,custom_id) -> list:
-        return []
-
 
 
     def check_validity(self, args:list) -> str:
@@ -22,9 +19,11 @@ class cmd:
         # int - whole number
         # float - decimal number
         # percent - 0.0 to 1.0
+        # range - number between min and max values
+        # rangei - whole number between min and max values
         # str - text
-        # custom:x - custom list, replace x with the custom id
-        # ? - every argument after this is considered optional
+        # custom - custom list from the list key
+        # setting optional to true makes it optional
 
         valids = self.get_acceptable_args()
 
@@ -32,7 +31,8 @@ class cmd:
             return "<!!> Not enough arguments were given!"
 
         for i, a in enumerate(valids):
-            match a:
+            # print(i, a, args[i + 1], a["type"])
+            match a["type"]:
                 case "int":
                     try:
                         num = int(args[i + 1])
@@ -51,13 +51,31 @@ class cmd:
                         if num <= 1.0 and num >= 0.0:
                             continue
                         else:
-                            f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between 0.0 and 1.0!"
+                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between 0.0 and 1.0!"
+                    except ValueError:
+                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                case "range":
+                    try:
+                        num = float(args[i + 1])
+                        if num <= float(a["max"]) and num >= float(a["min"]):
+                            continue
+                        else:
+                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between {a["min"]} and {a["max"]}!"
+                    except ValueError:
+                        return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
+                case "rangei":
+                    try:
+                        num = int(args[i + 1])
+                        if num <= int(a["max"]) and num >= int(a["min"]):
+                            continue
+                        else:
+                            return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a value between {a["min"]} and {a["max"]}!"
                     except ValueError:
                         return f"<!!> Argument {i + 1} ({args[i + 1]}) must be a number!"
                 case "str":
                     continue
                 case _:
-                    pass
+                    return "<!!> Failed due to bug in the code"
 
         return ""
 
@@ -65,8 +83,8 @@ class cmdAbilityScore(cmd):
     def description(self) -> str:
         return "Checks the +/- modifier of a given stat number"
 
-    def get_custom_args(self, custom_id) -> list:
-        return ["int"]
+    def get_acceptable_args(self) -> list:
+        return [{"name":"stat_number","type":"rangei","min":1,"max":30}]
 
     def execute(self, args:list):
         num = int(args[1])
@@ -127,6 +145,10 @@ commands = {
 def execute_command(args:list):
     if args[0] in commands:
         c = commands[args[0]]()
-        print(c.execute(args))
+        error = c.check_validity(args)
+        if error == "":
+            print(c.execute(args))
+        else:
+            print(error)
     else:
         print(f"<!!> Command '/{args[0]}' does not exist, run '/help commands' to see all commands that DO exist")

@@ -20,6 +20,7 @@ while True:
     else:
         print(f"Could not find character under ID '{player_name}'")
 
+print("Welcome user! Type '/help commands' for a list of available commands \n")
 while True:
     command = input("/")
     args = command.split()

@@ -1,6 +1,6 @@
 import sys
 
-commands = {}
+commands = []
 player_data = {}
 
 
@@ -14,10 +14,13 @@ class cmd:
     # Specific cmd functions
 
     def description(self) -> str:
-        return "Description"
+        return "No description was given..."
+
+    def bio(self) -> str:
+        return "This command is lacking in the explanation department...\n> Please remind the author of this program to give me instructions!!!"
     
-    def execute(self, args:list):
-        pass
+    def execute(self, args:list) -> str:
+        return ""
     
     def get_acceptable_args(self) -> list:
         return []
@@ -124,10 +127,15 @@ class cmdAbilityScore(cmd):
     def description(self) -> str:
         return "Checks the +/- modifier of a given stat number"
 
+    def bio(self) -> str:
+        b = "Enter a number between 1 and 30, and I'll calculate the modifier that is added to your roll"
+        b += "\n> Normally you should be using the /stat command, but I'm here incase you wanna learn about a stat number you don't have"
+        return b
+
     def get_acceptable_args(self) -> list:
         return [{"name":"stat_number","prompt": "Please enter a stat number (between 1 to 30)","type":"rangei","min":1,"max":30}]
 
-    def execute(self, args:list):
+    def execute(self, args:list) -> str:
         result = self.get_score(args)
         return f"> You'd have a {result} modifier with that stat number."
 
@@ -144,37 +152,101 @@ class cmdStat(cmd):
     def description(self) -> str:
         return "Checks the +/- modifier of a given stat"
 
+    def bio(self) -> str:
+        b = "Gives your modifier of a current stat that gets added when you roll said stat"
+        b += "\n> Such stats are Strength, Dexterity, Constitution, Intelligence, Wisdom, and Charisma" 
+        return b
+
     def get_acceptable_args(self) -> list:
         return [{
             "name": "stat_name", "prompt": "Please enter one of the 6 stats", "type": "custom",
             "list": ["strength","dexterity","constitution","intelligence","wisdom","charisma"]
         }]
 
-    def execute(self, args: list):
+    def execute(self, args:list) -> str:
         stat_name = self.autocomplete(args,1)
         stat_score = player_data["stats"][stat_name]
         ability_score = cmdAbilityScore()
         score = ability_score.get_score(["",stat_score])
-        return f"> You have a {score} modifier in {stat_name}"
+        return f"> You have a {score} modifier in {stat_name.title()} ({stat_score})"
+
+class cmdHelp(cmd):
+    def description(self) -> str:
+        return "Provides helpful information about this program"
+
+    def bio(self) -> str:
+        b = "I tell you everything you need to know about this program!"
+        b += "\n> Here's a list of all the different 'help' categories..."
+        b += "\n> /help commands : Gives a list of all available commands"
+        b += "\n> /help cmd <command> : Explains what a specific command does"
+        return b
+
+    def get_acceptable_args(self) -> list:
+        return [{
+            "name": "category", "prompt": "Please enter a type of help", "type": "custom",
+            "list": ["commands", "cmd"]
+        }]
+
+    def help_commands(self) -> str:
+        barrier = "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+        lister = f"\n> Here's a list of all the available commands\n{barrier}"
+        for c in commands:
+            command = c["cmd"]()
+            lister += f"\n> /{c["id"]} : {command.description()}"
+        lister += f"\n{barrier}\n> Type '/help cmd <command>' to learn more!\n"
+        return lister
+
+    def help_cmd(self, id:str) -> str:
+        for c in commands:
+            if c["id"] == id:
+                command = c["cmd"]()
+                full_text = "\n> Arguments look like (argument) for number input and <argument> for text input"
+                full_text += f"\n> /{id}"
+                for a in command.get_acceptable_args():
+                    if a["type"] == "str" or a["type"] == "custom":
+                        pre = "<"
+                        suf = ">"
+                    else:
+                        pre = "("
+                        suf = ")"
+                    full_text += f" {pre}{a["name"]}{suf}"
+                full_text += f"\n> {command.bio()}\n"
+                return full_text
+        return f"<!!> Command '/{id}' does not exist, run '/help commands' to see all commands that DO exist"
+
+    def execute(self, args:list) -> str:
+        category = self.autocomplete(args,1)
+        match category:
+            case "commands":
+                return self.help_commands()
+            case "cmd":
+                return self.help_cmd(args[2])
+
+        return ""
 
 
 
 # Adding all commands to a list
 
-commands = {
-    "ability_score": cmdAbilityScore,
-    "stat": cmdStat
-}
+commands = [
+    {"cmd": cmdAbilityScore, "id": "ability_score"},
+    {"cmd": cmdStat, "id": "stat"},
+    {"cmd": cmdHelp, "id": "help"}
+]
 
 # Command referencer
 
 def execute_command(args:list):
-    if args[0] in commands:
-        c = commands[args[0]]()
-        error = c.check_validity(args)
-        if error == "":
-            print(c.execute(args))
-        else:
-            print(error)
-    else:
-        print(f"<!!> Command '/{args[0]}' does not exist, run '/help commands' to see all commands that DO exist")
+    for c in commands:
+        if c["id"] == args[0]:
+            command = c["cmd"]()
+            error = command.check_validity(args)
+
+            if error == "":
+                print(command.execute(args))
+            else:
+                print(error)
+
+            return
+    
+    print(f"<!!> Command '/{args[0]}' does not exist, run '/help commands' to see all commands that DO exist")

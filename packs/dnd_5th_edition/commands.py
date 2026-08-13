@@ -457,6 +457,20 @@ class cmdRoll(cmd):
         roll[0] = code
         return roll
 
+    def skill_roll(self,skill_name:str,adv_type:str="",adv_count:int=1) -> list:
+            # print("ADV COUNT:",adv_count)
+            roll = []
+            modifier = cmdSkill().get_modifier(skill_name)[0]
+            if modifier:
+                modifier = f"+{modifier}" if modifier>0 else str(modifier)
+                code = f"1d20{modifier}"
+            else:
+                code = "1d20"
+    
+            roll = self.custom_roll(code,adv_type,adv_count)
+            roll[0] = code
+            return roll
+
     def execute(self, args: list) -> str:
         # print(args)
         a_t = args[2]
@@ -467,6 +481,15 @@ class cmdRoll(cmd):
             result = self.stat_roll(stat_name,a_t,a_c)
             msg:list[str] = []
             msg.append(f"Rolling for {stat_name.title()} ({result[0]})")
+            msg.extend(result[2])
+            msg.append(f"Result: {result[1]}")
+            return f"> {"\n> ".join(msg)}"
+
+        skill_name = self.custom_autocomplete(args[1],skill_list)
+        if skill_name != "":
+            result = self.skill_roll(skill_name,a_t,a_c)
+            msg:list[str] = []
+            msg.append(f"Rolling for {skill_name.title()} ({result[0]})")
             msg.extend(result[2])
             msg.append(f"Result: {result[1]}")
             return f"> {"\n> ".join(msg)}"

@@ -1,7 +1,7 @@
 # The Command Prompt esque program that can run commands such as rolling or attacking etc. with characters
 
 from pathlib import Path
-import commands
+from packs.dnd_5th_edition import commands
 import sys
 import json
 
@@ -20,9 +20,12 @@ while True:
     else:
         print(f"Could not find character under ID '{player_name}'")
 
-print("Welcome user! Type '/help commands' for a list of available commands \n")
+print("Welcome user! Type '/help commands' for a list of available commands\n")
 while True:
     command = input("/")
+    if command == "":
+        continue
     args = command.split()
     # print(args)
     commands.execute_command(args)
+    print()

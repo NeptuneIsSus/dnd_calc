@@ -185,6 +185,8 @@ class cmd:
         return matcher
 
     def custom_autocomplete(self,text:str,options:list[str]) -> str:
+        if text == "":
+            return ""
         matcher = next((option for option in options if option.lower().startswith(text.lower())),None)
         if matcher is None:
             matcher = ""
@@ -359,7 +361,7 @@ class cmdRoll(cmd):
 
     def get_acceptable_args(self) -> list:
         return [
-            {"name": "roll_type", "prompt": "Please enter a stat, skill, or custom roll (2d12+3)","type":"str"},
+            {"name": "roll_type", "prompt": "Please enter a roll type like a skill or weapon, or custom roll (2d12+3)","type":"str"},
             {
                 "name": "advantage", "prompt": "Add either an advantage or disadvantage, or leave blank for neither","type":"custom","default":"",
                 "list": ["advantage","disadvantage"]
@@ -371,6 +373,7 @@ class cmdRoll(cmd):
         sets = 1
         choose_highest = True
         adv = self.custom_autocomplete(adv_type,["advantage","disadvantage"])
+        # print(adv)
         if adv:
             sets += adv_count
             if adv == "disadvantage":
@@ -379,18 +382,26 @@ class cmdRoll(cmd):
 
     def roll(self,die:int,sides:int,modifier:int = 0,sets:int=1,choose_highest:bool=True) -> list:
         results:list[int] = []
+        result_info:list[str] = []
+        # print(sets,range(sets))
+        # print(die,range(die))
         for s in range(sets):
             roll = 0
+            roll_info:list[str] = []
             for d in range(die):
-                roll += random.randint(1,sides)
+                r = random.randint(1,sides)
+                roll += r
+                roll_info.append(str(r))
             results.append(roll + modifier)
+            mod = (f"+{modifier}" if modifier>0 else str(modifier)) if modifier else ""
+            result_info.append(f"({", ".join(roll_info)}) --> {roll}{mod}" + (f" --> {roll + modifier}" if modifier else ""))
 
         if choose_highest:
             chosen = max(results)
         else:
             chosen = min(results)
 
-        return [chosen]
+        return [chosen,result_info]
 
     def custom_roll(self,code:str,adv_type:str="",adv_count:int=1) -> list:
         # die, sides, modifier
@@ -424,29 +435,53 @@ class cmdRoll(cmd):
 
             error = "Unidentified" # for TypeError info
             adv = self.get_adv(adv_type,adv_count)
+            # print("ADV:",adv)
             
             roll = self.roll(die,sides,modifier,adv[1],adv[0])
 
-            return [True, roll]
+            return [True, roll[0], roll[1]]
         except ValueError:
             return [False, f"<!!> An improper dice roll was given ({error}), type /help cmd roll to see what a proper roll looks like"]
 
-    def execute(self, args: list) -> str:
-        if False:
-            pass
+    def stat_roll(self,stat_name:str,adv_type:str="",adv_count:int=1) -> list:
+        # print("ADV COUNT:",adv_count)
+        roll = []
+        modifier = cmdStat().get_modifier(stat_name)[0]
+        if modifier:
+            modifier = f"+{modifier}" if modifier>0 else str(modifier)
+            code = f"1d20{modifier}"
         else:
-            code = args[1]
-            adv_type = args[2] if len(args) > 2 else ""
-            adv_count = args[3] if len(args) > 3 else 1
+            code = "1d20"
 
-            result = self.custom_roll(code,adv_type,adv_count)
+        roll = self.custom_roll(code,adv_type,adv_count)
+        roll[0] = code
+        return roll
+
+    def execute(self, args: list) -> str:
+        # print(args)
+        a_t = args[2]
+        a_c = int(args[3])
+
+        stat_name = self.custom_autocomplete(args[1],stat_list)
+        if stat_name != "":
+            result = self.stat_roll(stat_name,a_t,a_c)
+            msg:list[str] = []
+            msg.append(f"Rolling for {stat_name.title()} ({result[0]})")
+            msg.extend(result[2])
+            msg.append(f"Result: {result[1]}")
+            return f"> {"\n> ".join(msg)}"
+
+        try:
+            check = int(args[1][0]) # Checks if the first character is a number
+            result = self.custom_roll(args[1],a_t,a_c)
             if result[0]:
-                return f"> Result: {result[1][0]}"
+                msg:list[str] = result[2]
+                msg.append(f"Result: {result[1]}")
+                return f"> {"\n> ".join(msg)}"
             else:
                 return result[1]
-
-
-        return ""
+        except ValueError:
+            return f"<!!> Either your roll type wasn't found, or you typed the code wrong. type /help cmd roll to see what a proper roll looks like"
 
     
 

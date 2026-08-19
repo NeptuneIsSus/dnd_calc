@@ -15,7 +15,7 @@ while True:
         print("Found character! Loading now...")
         with open(file_location, "r") as file:
             data = json.load(file)
-            commands.player_data = data
+            commands.set_player(data)
         break
     else:
         print(f"Could not find character under ID '{player_name}'")

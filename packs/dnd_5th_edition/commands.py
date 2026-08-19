@@ -1,8 +1,10 @@
 import sys
 import random
+import math
 
 commands = []
 player_data = {}
+player_classes:list[dict] = []
 
 
 
@@ -32,6 +34,29 @@ skill_reference = {
         "stealth": "dexterity",
         "survival": "wisdom"
         }
+level_cap = 20
+exp_thresholds = [
+    0,      # Level 1
+    300,    # Level 2
+    900,    # Level 3
+    2700,   # Level 4
+    6500,   # Level 5
+    14000,  # Level 6
+    23000,  # Level 7
+    34000,  # Level 8
+    48000,  # Level 9
+    64000,  # Level 10
+    85000,  # Level 11
+    100000, # Level 12
+    120000, # Level 13
+    140000, # Level 14
+    165000, # Level 15
+    195000, # Level 16
+    225000, # Level 17
+    265000, # Level 18
+    305000, # Level 19
+    355000  # Level 20
+]
 
 
 
@@ -56,6 +81,9 @@ class cmd:
         return []
 
     # Universal cmd functions
+
+    def translate_modifier(self,num:int) -> str:
+        return f"+{num}" if num > 0 else str(num)
 
     def check_individual_validity(self, input:str, valid:dict, index:int = 0) -> str:
         multiple = f"{index} " if index else ""
@@ -154,6 +182,9 @@ class cmd:
             while True:
                 # print(f"asking user for argument {i}")
                 given = input(f"{valids[i - 1]["prompt"]}: ")
+                if given == "":
+                    print("<!!> Please enter something")
+                    continue
                 if " " in given:
                     print("<!!> Individual arguments cannot contain spaces")
                     continue
@@ -197,6 +228,101 @@ class cmd:
 # SPECIFIC COMMANDS
 
 
+
+
+
+class cmdLevel(cmd):
+    def description(self):
+        return "Provides info about level, or levels you up"
+
+    def bio(self):
+        b = "Various commands relating to your level! Here's the list:"
+        b += "\n> /level get : Displays your character's universal level"
+        b += "\n> /level get <class> : Displays the current level of your class"
+        b += "\n> /level experience : Displays how many experience points you have"
+        b += "\n> /level progress : Shows how close you are to a level up"
+        b += "\n> /level up : Walks you through leveling up your character! If you have enough exp"
+        b += "\n> /level up force : Forces a level up without taking exp into consideration"
+        return b
+
+    def get_acceptable_args(self):
+        return [
+            {"name": "type", "prompt": "Please specify a type of level command", "type": "custom",
+            "list": ["get","experience","up","progress"]}
+        ]
+
+    def get_universal_level(self) -> int:
+        classes = player_data["classes"]
+        level = 0
+        for c in classes:
+            level += c["level"]
+        return level
+
+    def get_class_level(self, class_name:str) -> int:
+        getter = self.custom_autocomplete(class_name,player_classes)
+        if getter == "":
+            print("<!!> Could not find a class under that name! Your classes are:")
+            print("<!!> " + "\n<!!> ".join(player_classes))
+            return -1
+
+        index = next(i for i, d in enumerate(player_data["classes"]) if d["class"] == getter)
+        level = player_data["classes"][index]["level"]
+        return level
+
+    def get_progress(self) -> list:
+        level = self.get_universal_level()
+        next_level = exp_thresholds[level]
+        exp = player_data["experience_points"]
+        progress = exp / next_level
+        return [progress,level,exp,next_level]
+    
+    def execute(self, args):
+        category = self.autocomplete(args,1)
+        match category:
+            case "get":
+                if len(args) < 3:
+                    return f"Your universal level is {self.get_universal_level()}"
+                parameter = self.custom_autocomplete(args[2],player_classes)
+                parameter_title = "ERROR" if parameter == "" else parameter.title()
+                return f"Your {parameter_title} level is {self.get_class_level(parameter)}"
+            
+            case "experience":
+                exp = player_data["experience_points"]
+                return f"You have {exp} experience points"
+
+            case "progress":
+                p = self.get_progress()
+                if p[0] >= 1.0:
+                    return f"You have enough for a levelup! ({p[2]}/{p[3]})"
+                return f"You are {round(p[0] * 100)}% the way to a levelup ({p[2]}/{p[3]})"
+
+            case "up":
+                p = self.get_progress()
+                if p[0] < 1.0:
+                    return f"You do not have enough experience to level up ({p[2]}/{p[3]})"
+                return "Leveled up!"
+                
+        return ""
+
+class cmdProficiencyBonus(cmd):
+    def description(self):
+        return "Checks your character's proficiency bonus stat"
+
+    def bio(self):
+        b = "Quite a simple command, it just calculates your proficiency bonus based on level"
+        b += "\n> Your proficiency bonus is what's added onto proficient skills and saving throws"
+        return b
+
+    def get_acceptable_args(self):
+        return []
+
+    def get_proficiency(self) -> int:
+        level = player_data["classes"][0]["level"]
+        prof = math.ceil(level/4) + 1
+        return prof
+
+    def execute(self, args):
+        return f"> You have a proficiency bonus of +{self.get_proficiency()}."
 
 class cmdAbilityScore(cmd):
     def description(self) -> str:
@@ -448,8 +574,7 @@ class cmdRoll(cmd):
         roll = []
         modifier = cmdStat().get_modifier(stat_name)[0]
         if modifier:
-            modifier = f"+{modifier}" if modifier>0 else str(modifier)
-            code = f"1d20{modifier}"
+            code = f"1d20{self.translate_modifier(modifier)}"
         else:
             code = "1d20"
 
@@ -458,23 +583,38 @@ class cmdRoll(cmd):
         return roll
 
     def skill_roll(self,skill_name:str,adv_type:str="",adv_count:int=1) -> list:
-            # print("ADV COUNT:",adv_count)
-            roll = []
-            modifier = cmdSkill().get_modifier(skill_name)[0]
-            if modifier:
-                modifier = f"+{modifier}" if modifier>0 else str(modifier)
-                code = f"1d20{modifier}"
-            else:
-                code = "1d20"
-    
-            roll = self.custom_roll(code,adv_type,adv_count)
-            roll[0] = code
-            return roll
+        # print("ADV COUNT:",adv_count)
+        roll = []
+        modifier = cmdSkill().get_modifier(skill_name)[0]
+        if modifier:
+            code = f"1d20{self.translate_modifier(modifier)}"
+        else:
+            code = "1d20"
+
+        roll = self.custom_roll(code,adv_type,adv_count)
+        roll[0] = code
+        return roll
+
+    def initiative_roll(self,adv_type:str="",adv_count:int=1):
+        dex = cmdStat().get_modifier("dexterity")[0]
+        code = f"1d20" + self.translate_modifier(dex)
+        roll = self.custom_roll(code,adv_type,adv_count)
+        roll[0] = code
+        return roll
 
     def execute(self, args: list) -> str:
         # print(args)
         a_t = args[2]
         a_c = int(args[3])
+
+        stat_name = self.custom_autocomplete(args[1],["initiative"])
+        if stat_name != "":
+            result = self.initiative_roll(a_t,a_c)
+            msg:list[str] = []
+            msg.append(f"Rolling for Initiative ({result[0]})")
+            msg.extend(result[2])
+            msg.append(f"Result: {result[1]}")
+            return f"> {"\n> ".join(msg)}"
 
         stat_name = self.custom_autocomplete(args[1],stat_list)
         if stat_name != "":
@@ -515,10 +655,18 @@ commands = [
     {"cmd": cmdStat, "id": "stat"},
     {"cmd": cmdHelp, "id": "help"},
     {"cmd": cmdSkill, "id": "skill"},
-    {"cmd": cmdRoll, "id": "roll"}
+    {"cmd": cmdRoll, "id": "roll"},
+    {"cmd": cmdProficiencyBonus, "id":"proficiency_bonus"},
+    {"cmd": cmdLevel, "id":"level"}
 ]
 
 # Command referencer
+
+def set_player(data:dict):
+    global player_data 
+    player_data = data
+    for c in player_data["classes"]:
+        player_classes.append(c["class"])
 
 def execute_command(args:list):
     for c in commands:
